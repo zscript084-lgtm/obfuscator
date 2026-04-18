@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roblox Obfuscator</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; padding: 20px; text-align: center; }
+        h1 { text-shadow: 0 0 10px #0f0; margin-bottom: 20px; }
+        .container { display: flex; gap: 20px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+        textarea { width: 45%; height: 500px; background: #111; color: #fff; border: 1px solid #333; padding: 10px; font-family: 'Courier New', monospace; font-size: 12px; }
+        button { padding: 15px 40px; background: #0f0; color: #000; border: none; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 16px; text-transform: uppercase; }
+        button:hover { background: #fff; box-shadow: 0 0 20px #0f0; }
+        .warning { color: #ff0000; margin-top: 20px; font-size: 12px; max-width: 600px; margin-left: auto; margin-right: auto; }
+    </style>
+</head>
+<body>
+    <h1>Single-String Loadstring Obfuscator</h1>
+    <p>Output format: loadstring("encrypted_payload") surrounded by junk.</p>
+    <div class="container">
+        <textarea id="in" placeholder="Paste your Lua script here..."></textarea>
+        <textarea id="out" readonly placeholder="Obfuscated output will appear here..."></textarea>
+    </div>
+    <button onclick="run()">Generate Obfuscated Script</button>
+    <p class="warning">WARNING: This generates a single executable string. Keep your original code safe. This tool runs locally in your browser.</p>
+
+    <script>
+        const r = () => '_' + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+        
+        const generateJunk = () => {
+            const v1 = r();
+            const v2 = r();
+            const v3 = r();
+            const ops = ['+', '-', '*', '%', '..', '..math.random()', '..os.time()'];
+            return `local ${v1} = ${Math.random()} ${ops[Math.floor(Math.random()*ops.length)]} ${Math.random()}; if ${v1} == -1 then return end; local ${v2} = "${btoa(r(10))}"; ${v2} = nil; local ${v3} = ${v1} + ${v2}; ${v3} = nil;`;
+        };
+
+        function run() {
+            const code = document.getElementById('in').value;
+            if(!code) { alert("Enter code first."); return; }
+            
+            const encoded = btoa(unescape(encodeURIComponent(code)));
+            
+            let junk = "";
+            for(let i=0; i<200; i++) {
+                junk += generateJunk() + "\n";
+            }
+            
+            const funcVar = r();
+            const stringVar = r();
+            const execVar = r();
+            const decodedVar = r();
+            const decoderFunc = r();
+            
+            const output = `
+${junk}
+local ${decodedVar} = "${encoded}";
+${junk}
+local function ${decoderFunc}(data)
+    local ${stringVar} = "";
+    for i = 1, #data do
+        local c = data:sub(i, i);
+        ${stringVar} = ${stringVar} .. c;
+    end
+    return ${stringVar};
+end
+local ${execVar} = loadstring or load;
+local ${decodedVar}_decoded = ${decoderFunc}(${decodedVar});
+${decodedVar} = nil;
+${decoderFunc} = nil;
+pcall(function()
+    local fn = ${execVar}(${decodedVar}_decoded);
+    ${decodedVar}_decoded = nil;
+    if fn then fn() end;
+end);
+${execVar} = nil;
+`;
+            document.getElementById('out').value = output;
+        }
+    </script>
+</body>
+</html>
